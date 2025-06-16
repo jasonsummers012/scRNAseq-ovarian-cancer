@@ -2,3 +2,18 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# R environment folders
+renv/
+.Rhistory
+.RData
+
+# Data folder
+data/
+
+# Ignore renv.lock if you do NOT want to share environment lockfile
+renv.lock
+
+# OS and editor files
+.DS_Store
+*.swp
