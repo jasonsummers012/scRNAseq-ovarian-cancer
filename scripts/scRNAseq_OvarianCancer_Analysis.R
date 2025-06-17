@@ -1,7 +1,8 @@
 library(Seurat)
 library(SeuratData)
 library(ggplot2)
-library(tidyvserse)
+library(tidyverse)
+library(rPanglaoDB)
 
 #Create Seurat object
 ovarian_cancer_data = Read10X_h5("data/17k_Ovarian_Cancer_scFFPE_count_filtered_feature_bc_matrix.h5")
@@ -122,6 +123,57 @@ dim_plot = DimPlot(
 ggsave(
   "results/dim_plot.png",
   dim_plot,
+  width = 10,
+  height = 8,
+  dpi = 300
+)
+
+#Find markers for every clusters
+ovarian_markers = FindAllMarkers(
+  ovarian_cancer,
+  only.pos = TRUE,
+  logfc.threshold = 1,
+  min.pct = 0.25
+)
+
+ovarian_markers = ovarian_markers[ovarian_markers$p_val_adj < 0.05, ]
+
+write.csv(ovarian_markers, "results/cluster_markers.csv")
+
+#Save and load Seurat object
+saveRDS(
+  ovarian_cancer,
+  file = "results/ovarian_cancer_final.rds"
+)
+
+ovarian_cancer = readRDS("results/ovarian_cancer_final.rds")
+
+#Identify fibroblasts
+fibroblast_markers = c("COL1A1", "COL3A1", "FN1", "ACTA2", "PDGFRA")
+
+fibroblast_samples = getMarkers(include = fibroblast_markers)
+human_fibroblast = fibroblast_samples[fibroblast_samples$Specie == "Homo sapiens", ]
+
+fibroblast_clusters = ovarian_markers %>%
+  filter(gene %in% fibroblast_markers) %>%
+  group_by(cluster) %>%
+  summarize(
+    n_fibroblast_markers = n(),
+    avg_log2FC = mean(avg_log2FC),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(n_fibroblast_markers), desc(avg_log2FC))
+
+vln_plot = VlnPlot(
+  ovarian_cancer,
+  features = fibroblast_markers,
+  group.by = "seurat_clusters",
+  pt.size = 0.1
+)
+
+ggsave(
+  "results/vlnplot_fibroblast_markers_cluster0.png",
+  vln_plot,
   width = 10,
   height = 8,
   dpi = 300

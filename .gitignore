@@ -17,3 +17,11 @@ renv.lock
 # OS and editor files
 .DS_Store
 *.swp
+
+*.rds
+*.RData
+*.h5
+*.csv
+*.tsv
+*.loom
+.RDataTmp*
