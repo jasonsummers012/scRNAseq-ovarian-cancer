@@ -1,6 +1,7 @@
 library(Seurat)
 library(SeuratData)
 library(ggplot2)
+library(tidyvserse)
 
 #Create Seurat object
 ovarian_cancer_data = Read10X_h5("data/17k_Ovarian_Cancer_scFFPE_count_filtered_feature_bc_matrix.h5")
@@ -10,7 +11,7 @@ ovarian_cancer = CreateSeuratObject(
   min.features = 200
 )
 
-#Filter out cells with >5% mitochondrial counts
+#Filter out poor quality cells
 ovarian_cancer[["percent.mt"]] = PercentageFeatureSet(
   ovarian_cancer,
   pattern = "^MT-"
@@ -58,4 +59,70 @@ ggsave(
 
 #Scale the data
 all_genes = rownames(ovarian_cancer)
-ovarian_cancer = ScaleData(ovarian_cancer, features = all_genes)
+ovarian_cancer = ScaleData(
+  ovarian_cancer,
+  features = all_genes
+)
+
+#Perform PCA
+ovarian_cancer = RunPCA(
+  ovarian_cancer,
+  features = VariableFeatures(object = ovarian_cancer)
+)
+
+heatmap = DimHeatmap(
+  ovarian_cancer,
+  dims = 1,
+  cells = 500,
+  balanced = TRUE,
+  fast = FALSE
+)
+
+ggsave(
+  "results/pca_heatmap.png",
+  heatmap,
+  width = 20,
+  height = 16,
+  dpi = 600,
+)
+
+elbow_plot = ElbowPlot(ovarian_cancer)
+
+ggsave(
+  "results/elbow_plot.png",
+  elbow_plot,
+  width = 10,
+  height = 8,
+  dpi = 300,
+  bg = "white"
+)
+
+#Perform clustering
+ovarian_cancer = FindNeighbors(
+  ovarian_cancer,
+  dims = 1:12
+)
+
+ovarian_cancer = FindClusters(
+  ovarian_cancer,
+  resolution = 0.5
+)
+
+#Perform non-linear dimensional reduction
+ovarian_cancer = RunUMAP(
+  ovarian_cancer,
+  dims = 1:10
+)
+
+dim_plot = DimPlot(
+  ovarian_cancer,
+  reduction = "umap",
+)
+
+ggsave(
+  "results/dim_plot.png",
+  dim_plot,
+  width = 10,
+  height = 8,
+  dpi = 300
+)
