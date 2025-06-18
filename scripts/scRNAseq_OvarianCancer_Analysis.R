@@ -148,21 +148,24 @@ saveRDS(
 
 ovarian_cancer = readRDS("results/ovarian_cancer_final.rds")
 
-#Identify fibroblasts
+#Function to identify matches for cell types
+summarize_marker_enrichment = function(marker_table, marker_genes) {
+  marker_table %>%
+    filter(gene %in% marker_genes) %>%
+    group_by(cluster) %>%
+    summarize(
+      n_markers = n(),
+      avg_log2FC = mean(avg_log2FC),
+      .groups = "drop"
+    ) %>%
+    arrange(desc(n_markers), desc(avg_log2FC))
+}
+
+#Identify fibroblasts -> cluster 0
 fibroblast_markers = c("COL1A1", "COL3A1", "FN1", "ACTA2", "PDGFRA")
 
-fibroblast_samples = getMarkers(include = fibroblast_markers)
-human_fibroblast = fibroblast_samples[fibroblast_samples$Specie == "Homo sapiens", ]
-
-fibroblast_clusters = ovarian_markers %>%
-  filter(gene %in% fibroblast_markers) %>%
-  group_by(cluster) %>%
-  summarize(
-    n_fibroblast_markers = n(),
-    avg_log2FC = mean(avg_log2FC),
-    .groups = "drop"
-  ) %>%
-  arrange(desc(n_fibroblast_markers), desc(avg_log2FC))
+fibroblast_clusters = summarize_marker_enrichment(ovarian_markers, fibroblast_markers)
+print(fibroblast_clusters)
 
 vln_plot = VlnPlot(
   ovarian_cancer,
@@ -178,3 +181,21 @@ ggsave(
   height = 8,
   dpi = 300
 )
+
+#Identify luminal epithelial cells -> 12, 6
+luminal_markers = c("KRT18", "MUC1", "CEBPD", "KRT8", "CD9", "AQP3")
+
+luminal_clusters = summarize_marker_enrichment(ovarian_markers, luminal_markers)
+
+vln_lot = VlnPlot(
+  ovarian_cancer,
+  features = luminal_markers,
+  group.by = "seurat_clusters",
+  pt.size = 0.1
+)
+
+#Identify basal epithelial cells -> 12
+basal_markers = c("KRT5", "KRT14", "KRT15", "LAMB3")
+
+basal_clusters = summarize_marker_enrichment(ovarian_markers, basal_markers)
+print(basal_clusters)
